@@ -1,0 +1,6 @@
+logenv
+backend/*.env
+backend/backend/__pycache__
+frontend/*.env
+frontend/node_modules
+frontend/package-lock.json
