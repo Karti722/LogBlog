@@ -15,5 +15,5 @@ SUPABASE_SERVICE_ROLE_KEY=your-service-role-key-here
 2) Add a .env file for supabase on client side:
 REACT_APP_SUPABASE_URL=https://your-project-id.supabase.co
 REACT_APP_SUPABASE_ANON_KEY=your-anon-key-here
-1) Run this command ("npm run start") 
+1) Run this command ("npm run dev") 
 
