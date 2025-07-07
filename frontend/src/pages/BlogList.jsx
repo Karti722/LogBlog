@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { blogAPI } from '../services/api';
-import { MagnifyingGlassIcon, TagIcon, CalendarIcon, EyeIcon, HeartIcon } from '@heroicons/react/24/outline';
+import { MagnifyingGlassIcon, TagIcon, CalendarIcon, EyeIcon, HeartIcon, PlusIcon } from '@heroicons/react/24/outline';
+import { formatDate } from '../utils/dateFormat';
 
 const BlogList = () => {
   const [posts, setPosts] = useState([]);
@@ -9,6 +10,9 @@ const BlogList = () => {
   const [tags, setTags] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchParams, setSearchParams] = useSearchParams();
+  
+  // Check authentication status
+  const isAuthenticated = !!localStorage.getItem('authToken');
   
   const [filters, setFilters] = useState({
     search: searchParams.get('search') || '',
@@ -90,12 +94,49 @@ const BlogList = () => {
       {/* Header */}
       <div className="bg-white shadow">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <h1 className="text-3xl font-bold text-gray-900">Blog Posts</h1>
-          <p className="mt-2 text-gray-600">
-            Discover insights, tutorials, and stories from our community
-          </p>
+          <div className="flex justify-between items-center">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900">Blog Posts</h1>
+              <p className="mt-2 text-gray-600">
+                Discover insights, tutorials, and stories from our community
+              </p>
+            </div>
+            {isAuthenticated && (
+              <Link
+                to="/blog/create"
+                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+              >
+                <PlusIcon className="h-5 w-5 mr-2" />
+                Create Post
+              </Link>
+            )}
+          </div>
         </div>
       </div>
+
+      {/* Login Prompt for Unauthenticated Users */}
+      {!isAuthenticated && (
+        <div className="bg-indigo-50 border-l-4 border-indigo-400 p-4 mx-4 mt-4 sm:mx-6 lg:mx-8">
+          <div className="flex">
+            <div className="flex-shrink-0">
+              <PlusIcon className="h-5 w-5 text-indigo-400" />
+            </div>
+            <div className="ml-3">
+              <p className="text-sm text-indigo-700">
+                Want to share your knowledge?{' '}
+                <Link to="/login" className="font-medium underline hover:text-indigo-600">
+                  Sign in
+                </Link>{' '}
+                or{' '}
+                <Link to="/register" className="font-medium underline hover:text-indigo-600">
+                  create an account
+                </Link>{' '}
+                to start writing and managing your own blog posts!
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="lg:grid lg:grid-cols-4 lg:gap-8">
@@ -210,7 +251,7 @@ const BlogList = () => {
                         )}
                         <span className="text-gray-500 text-sm flex items-center ml-auto">
                           <CalendarIcon className="h-4 w-4 mr-1" />
-                          {new Date(post.created_at).toLocaleDateString()}
+                          {formatDate(post.created_at)}
                         </span>
                       </div>
                       

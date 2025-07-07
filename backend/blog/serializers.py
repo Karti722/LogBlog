@@ -1,5 +1,6 @@
 from rest_framework import serializers
 from django.contrib.auth.models import User
+from django.utils.text import slugify
 from .models import Post, Category, Tag, Comment, PostLike, PostView
 
 
@@ -106,6 +107,7 @@ class PostDetailSerializer(serializers.ModelSerializer):
 
 class PostCreateUpdateSerializer(serializers.ModelSerializer):
     tags = serializers.PrimaryKeyRelatedField(many=True, queryset=Tag.objects.all(), required=False)
+    slug = serializers.SlugField(required=False)  # Make slug optional
     
     class Meta:
         model = Post
@@ -117,12 +119,42 @@ class PostCreateUpdateSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         tags_data = validated_data.pop('tags', [])
         validated_data['author'] = self.context['request'].user
+        
+        # Auto-generate slug if not provided
+        if not validated_data.get('slug'):
+            title = validated_data.get('title', '')
+            base_slug = slugify(title)
+            slug = base_slug
+            counter = 1
+            
+            # Ensure slug is unique
+            while Post.objects.filter(slug=slug).exists():
+                slug = f"{base_slug}-{counter}"
+                counter += 1
+            
+            validated_data['slug'] = slug
+        
         post = Post.objects.create(**validated_data)
         post.tags.set(tags_data)
         return post
     
     def update(self, instance, validated_data):
         tags_data = validated_data.pop('tags', None)
+        
+        # Auto-generate slug if title changed and no slug provided
+        if 'title' in validated_data and not validated_data.get('slug'):
+            title = validated_data.get('title', instance.title)
+            base_slug = slugify(title)
+            slug = base_slug
+            counter = 1
+            
+            # Ensure slug is unique (excluding current instance)
+            while Post.objects.filter(slug=slug).exclude(pk=instance.pk).exists():
+                slug = f"{base_slug}-{counter}"
+                counter += 1
+            
+            validated_data['slug'] = slug
+        
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
         instance.save()

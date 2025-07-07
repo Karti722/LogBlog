@@ -53,8 +53,15 @@ const Home = () => {
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link
-                to="/ai-tutorial"
+                to="/blog/create"
                 className="bg-yellow-400 text-purple-900 px-8 py-3 rounded-lg font-semibold hover:bg-yellow-300 transition-colors inline-flex items-center"
+              >
+                <SparklesIcon className="h-5 w-5 mr-2" />
+                Create AI-Powered Blog
+              </Link>
+              <Link
+                to="/ai-tutorial"
+                className="border-2 border-white text-white px-8 py-3 rounded-lg font-semibold hover:bg-white hover:text-indigo-600 transition-colors inline-flex items-center"
               >
                 <SparklesIcon className="h-5 w-5 mr-2" />
                 Try AI Tutorial Generator

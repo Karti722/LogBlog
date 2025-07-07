@@ -44,8 +44,8 @@ export const blogAPI = {
   getPosts: (params = {}) => api.get('/blog/api/posts/', { params }),
   getPost: (slug) => api.get(`/blog/api/posts/${slug}/`),
   createPost: (data) => api.post('/blog/api/posts/', data),
-  updatePost: (id, data) => api.put(`/blog/api/posts/${id}/`, data),
-  deletePost: (id) => api.delete(`/blog/api/posts/${id}/`),
+  updatePost: (slug, data) => api.put(`/blog/api/posts/${slug}/`, data),
+  deletePost: (slug) => api.delete(`/blog/api/posts/${slug}/`),
   likePost: (id) => api.post(`/blog/api/posts/${id}/like/`),
   getFeaturedPosts: () => api.get('/blog/api/posts/featured/'),
   getPopularPosts: () => api.get('/blog/api/posts/popular/'),
@@ -64,6 +64,11 @@ export const blogAPI = {
   createComment: (data) => api.post('/blog/api/comments/', data),
   updateComment: (id, data) => api.put(`/blog/api/comments/${id}/`, data),
   deleteComment: (id) => api.delete(`/blog/api/comments/${id}/`),
+
+  // AI Blog Assistance
+  getAITitleSuggestions: (data) => api.post('/blog/api/posts/ai_title_suggestions/', data),
+  getAIContentOutline: (data) => api.post('/blog/api/posts/ai_content_outline/', data),
+  getAIWritingTips: (data) => api.post('/blog/api/posts/ai_writing_tips/', data),
 };
 
 // AI Tutorial API endpoints
@@ -89,10 +94,15 @@ export const tutorialAPI = {
 
 // Auth API endpoints
 export const authAPI = {
-  login: (credentials) => api.post('/api-auth/login/', credentials),
-  logout: () => api.post('/api-auth/logout/'),
-  register: (userData) => api.post('/api-auth/register/', userData),
-  getProfile: () => api.get('/api-auth/user/'),
+  login: (credentials) => api.post('/auth/login/', credentials),
+  logout: () => api.post('/auth/logout/'),
+  register: (userData) => api.post('/auth/register/', userData),
+  forgotPassword: (email) => api.post('/auth/forgot-password/', { email }),
+  resetPassword: (data) => api.post('/auth/reset-password/', data),
+  getProfile: () => api.get('/auth/profile/'),
+  isAuthenticated: () => {
+    return !!localStorage.getItem('authToken');
+  },
 };
 
 export default api;

@@ -6,6 +6,7 @@ from django.db.models import Q, Count, F
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter, OrderingFilter
 from django.contrib.auth.models import User
+from django.utils import timezone
 import logging
 
 from .models import Post, Category, Tag, Comment, PostLike, PostView
@@ -25,6 +26,7 @@ class PostViewSet(viewsets.ModelViewSet):
     search_fields = ['title', 'content', 'excerpt']
     ordering_fields = ['created_at', 'updated_at', 'published_at', 'views_count', 'likes_count']
     ordering = ['-created_at']
+    lookup_field = 'slug'
     
     def get_serializer_class(self):
         if self.action == 'list':
@@ -124,73 +126,201 @@ class PostViewSet(viewsets.ModelViewSet):
         posts = self.get_queryset().filter(status='published').order_by('-published_at')[:10]
         serializer = PostListSerializer(posts, many=True, context={'request': request})
         return Response(serializer.data)
+    
+    @action(detail=False, methods=['post'], permission_classes=[permissions.IsAuthenticated])
+    def ai_title_suggestions(self, request):
+        """Generate AI-powered title suggestions for a blog post"""
+        try:
+            from ai_tutorial.services import OpenAIService
+            
+            topic = request.data.get('topic', '')
+            keywords = request.data.get('keywords', [])
+            
+            if not topic:
+                return Response({'error': 'Topic is required'}, status=status.HTTP_400_BAD_REQUEST)
+            
+            ai_service = OpenAIService()
+            prompt = f"""
+            Generate 5 compelling blog post titles for the following topic: {topic}
+            Keywords to include: {', '.join(keywords) if keywords else 'None'}
+            
+            Requirements:
+            - Titles should be engaging and clickable
+            - Include relevant keywords naturally
+            - Vary in style (how-to, listicle, guide, etc.)
+            - Keep titles under 60 characters for SEO
+            
+            Return only the titles, one per line.
+            """
+            
+            suggestions = ai_service.generate_content(prompt)
+            titles = [title.strip() for title in suggestions.split('\n') if title.strip()]
+            
+            return Response({'suggestions': titles})
+            
+        except Exception as e:
+            logger.error(f"Error generating title suggestions: {str(e)}")
+            return Response({'error': 'Failed to generate suggestions'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    
+    @action(detail=False, methods=['post'], permission_classes=[permissions.IsAuthenticated])
+    def ai_content_outline(self, request):
+        """Generate AI-powered content outline for a blog post"""
+        try:
+            from ai_tutorial.services import OpenAIService
+            
+            title = request.data.get('title', '')
+            target_audience = request.data.get('target_audience', 'general')
+            content_type = request.data.get('content_type', 'tutorial')
+            
+            if not title:
+                return Response({'error': 'Title is required'}, status=status.HTTP_400_BAD_REQUEST)
+            
+            ai_service = OpenAIService()
+            prompt = f"""
+            Create a detailed outline for a blog post with the title: "{title}"
+            Target audience: {target_audience}
+            Content type: {content_type}
+            
+            Requirements:
+            - Create a logical structure with main sections and subsections
+            - Include introduction and conclusion
+            - Suggest key points to cover in each section
+            - Add suggestions for examples, code snippets, or visuals where appropriate
+            - Ensure the outline flows logically from beginner to advanced concepts
+            
+            Format the outline with clear headers and bullet points.
+            """
+            
+            outline = ai_service.generate_content(prompt)
+            
+            return Response({'outline': outline})
+            
+        except Exception as e:
+            logger.error(f"Error generating content outline: {str(e)}")
+            return Response({'error': 'Failed to generate outline'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    
+    @action(detail=False, methods=['post'], permission_classes=[permissions.IsAuthenticated])
+    def ai_writing_tips(self, request):
+        """Get AI-powered writing tips based on current content"""
+        try:
+            from ai_tutorial.services import OpenAIService
+            
+            content = request.data.get('content', '')
+            title = request.data.get('title', '')
+            improvement_focus = request.data.get('focus', 'general')
+            
+            if not content:
+                return Response({'error': 'Content is required'}, status=status.HTTP_400_BAD_REQUEST)
+            
+            ai_service = OpenAIService()
+            prompt = f"""
+            Analyze the following blog post content and provide specific writing improvement suggestions:
+            
+            Title: {title}
+            Content: {content[:2000]}...
+            
+            Focus on: {improvement_focus}
+            
+            Provide feedback on:
+            1. Content structure and flow
+            2. Readability and clarity
+            3. Engagement and tone
+            4. SEO optimization
+            5. Technical accuracy (if applicable)
+            
+            Give 3-5 specific, actionable suggestions for improvement.
+            """
+            
+            tips = ai_service.generate_content(prompt)
+            
+            return Response({'tips': tips})
+            
+        except Exception as e:
+            logger.error(f"Error generating writing tips: {str(e)}")
+            return Response({'error': 'Failed to generate tips'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    def perform_create(self, request, *args, **kwargs):
+        """Override to set the author when creating a post"""
+        return super().perform_create(request, *args, **kwargs)
+
+    def create(self, request, *args, **kwargs):
+        """Override create to handle blog post creation with AI assistance tracking"""
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        
+        # Set the author to the current user
+        serializer.save(author=request.user)
+        
+        headers = self.get_success_headers(serializer.data)
+        return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+
+    @action(detail=False, methods=['post'], permission_classes=[permissions.IsAuthenticated])
+    def track_ai_assistance(self, request):
+        """Track AI assistance usage for a user"""
+        try:
+            from ai_tutorial.models import AIUsage
+            
+            # Log the AI assistance usage
+            AIUsage.objects.create(
+                user=request.user,
+                endpoint='blog_post_creation',  # or other relevant endpoint
+                timestamp=timezone.now()
+            )
+            
+            return Response({'message': 'AI assistance usage tracked'})
+        
+        except Exception as e:
+            logger.error(f"Error tracking AI assistance: {str(e)}")
+            return Response({'error': 'Failed to track usage'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    
+    @action(detail=False, methods=['get'], permission_classes=[permissions.IsAuthenticated])
+    def ai_usage_stats(self, request):
+        """Get AI usage statistics for the authenticated user"""
+        try:
+            from ai_tutorial.models import AIUsage
+            
+            # Get usage stats for the user
+            stats = AIUsage.objects.filter(user=request.user).values(
+                'endpoint'
+            ).annotate(
+                total_usage=Count('id')
+            ).order_by('-total_usage')
+            
+            return Response({'usage_stats': list(stats)})
+        
+        except Exception as e:
+            logger.error(f"Error fetching AI usage stats: {str(e)}")
+            return Response({'error': 'Failed to fetch stats'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 class CategoryViewSet(viewsets.ReadOnlyModelViewSet):
-    queryset = Category.objects.annotate(posts_count=Count('posts'))
+    """ViewSet for Category model - read-only for now"""
+    queryset = Category.objects.annotate(post_count=Count('posts')).order_by('name')
     serializer_class = CategorySerializer
-    permission_classes = [permissions.AllowAny]
+    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
 
 
 class TagViewSet(viewsets.ReadOnlyModelViewSet):
-    queryset = Tag.objects.annotate(posts_count=Count('posts'))
+    """ViewSet for Tag model - read-only for now"""
+    queryset = Tag.objects.annotate(post_count=Count('posts')).order_by('name')
     serializer_class = TagSerializer
-    permission_classes = [permissions.AllowAny]
-    filter_backends = [SearchFilter]
-    search_fields = ['name']
+    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
 
 
 class CommentViewSet(viewsets.ModelViewSet):
-    queryset = Comment.objects.select_related('author', 'post').prefetch_related('replies')
+    """ViewSet for Comment model"""
+    queryset = Comment.objects.select_related('author', 'post').order_by('-created_at')
     serializer_class = CommentSerializer
     permission_classes = [permissions.IsAuthenticatedOrReadOnly]
-    filter_backends = [DjangoFilterBackend, OrderingFilter]
-    filterset_fields = ['post', 'is_approved']
-    ordering = ['created_at']
     
     def get_queryset(self):
+        """Filter comments by post if post_id is provided"""
         queryset = super().get_queryset()
-        
-        # Filter approved comments for non-staff users
-        if not self.request.user.is_staff:
-            queryset = queryset.filter(is_approved=True)
-        
+        post_id = self.request.query_params.get('post_id')
+        if post_id:
+            queryset = queryset.filter(post_id=post_id)
         return queryset
     
     def perform_create(self, serializer):
+        """Set the author when creating a comment"""
         serializer.save(author=self.request.user)
-    
-    def get_permissions(self):
-        """
-        Instantiates and returns the list of permissions that this view requires.
-        """
-        if self.action in ['update', 'partial_update', 'destroy']:
-            permission_classes = [permissions.IsAuthenticated]
-        else:
-            permission_classes = [permissions.IsAuthenticatedOrReadOnly]
-        
-        return [permission() for permission in permission_classes]
-    
-    def update(self, request, *args, **kwargs):
-        comment = self.get_object()
-        
-        # Only allow author or staff to update
-        if comment.author != request.user and not request.user.is_staff:
-            return Response(
-                {'error': 'You can only edit your own comments'},
-                status=status.HTTP_403_FORBIDDEN
-            )
-        
-        return super().update(request, *args, **kwargs)
-    
-    def destroy(self, request, *args, **kwargs):
-        comment = self.get_object()
-        
-        # Only allow author or staff to delete
-        if comment.author != request.user and not request.user.is_staff:
-            return Response(
-                {'error': 'You can only delete your own comments'},
-                status=status.HTTP_403_FORBIDDEN
-            )
-        
-        return super().destroy(request, *args, **kwargs)

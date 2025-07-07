@@ -1,8 +1,55 @@
-logenv
-backend/__pycache__
-backend/*/__pycache__
+# Python
+logenv/
+**/__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+start_servers.bat
+start_servers.ps1
+# Environment variables
 backend/*.env
-backend/backend/__pycache__
 frontend/*.env
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Frontend
 frontend/node_modules
 frontend/package-lock.json
+frontend/dist
+frontend/build
+
+# Database
+*.db
+*.sqlite3
+db.sqlite3
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
