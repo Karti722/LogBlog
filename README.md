@@ -30,7 +30,7 @@ LogBlog is a comprehensive web application that combines a modern blog platform 
 - **Preview Mode**: Live preview of your content before publishing
 
 ### AI Tutorial Generator
-- **AI-Powered Tutorials**: Generate personalized tutorials using OpenAI GPT
+- **AI-Powered Tutorials**: Generate personalized tutorials using custom ML models (PyTorch + scikit-learn)
 - **Step-by-Step Learning**: Structured tutorials with code examples
 - **Difficulty Levels**: Beginner, intermediate, and advanced content
 - **Progress Tracking**: Track learning progress through tutorials
@@ -49,7 +49,7 @@ LogBlog is a comprehensive web application that combines a modern blog platform 
 - **Django 5.2.4**: Web framework
 - **Django REST Framework**: API development
 - **PostgreSQL**: Database (via Supabase)
-- **OpenAI API**: AI tutorial generation
+- **Custom ML Models**: PyTorch & scikit-learn based tutorial generation
 - **CORS Headers**: Cross-origin resource sharing
 
 ### Frontend
@@ -66,7 +66,7 @@ LogBlog is a comprehensive web application that combines a modern blog platform 
 - Python 3.12+
 - Node.js 18+
 - PostgreSQL database (Supabase account)
-- OpenAI API key
+- ML models (PyTorch, scikit-learn)
 
 ### Backend Setup
 
@@ -103,7 +103,10 @@ LogBlog is a comprehensive web application that combines a modern blog platform 
    DEBUG=True
    
    # OpenAI Configuration
-   OPENAI_API_KEY=your-openai-api-key-here
+   # ML Configuration (PyTorch & scikit-learn)
+   USE_ML_GENERATOR=True
+   ML_MODEL_PATH=backend/ai_tutorial/models/
+   ML_DEVICE=auto
    ```
 
 5. **Run database migrations**
@@ -214,7 +217,7 @@ The blog creation feature includes an intelligent AI assistant that guides users
 
 ### AI Tutorial Generation
 1. **Request Tutorial**: Users describe what they want to learn
-2. **AI Processing**: OpenAI GPT generates structured content
+2. **AI Processing**: Custom ML models generate structured content locally
 3. **Tutorial Creation**: System creates tutorial with steps and code examples
 4. **Progress Tracking**: Users can track their learning progress
 
@@ -302,7 +305,9 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 ## 🙏 Acknowledgments
 
-- OpenAI for providing the GPT API for tutorial generation
+- PyTorch team for the neural network framework
+- Scikit-learn contributors for machine learning tools
+- Hugging Face for sentence transformers
 - Django community for the excellent web framework
 - React team for the powerful UI library
 - Tailwind CSS for the utility-first CSS framework
@@ -324,7 +329,7 @@ For support, email support@logblog.com or create an issue in the GitHub reposito
 ✅ **Individual Post Pages**: Click on any blog post to read the full content  
 ✅ **Categories & Tags**: Filter posts by categories (Django, JavaScript, React, CSS, etc.)  
 ✅ **Search Functionality**: Search through blog posts  
-✅ **AI Tutorial Generator**: Request custom tutorials with OpenAI integration  
+✅ **AI Tutorial Generator**: Request custom tutorials with ML integration (completely free!)  
 ✅ **Responsive Design**: Beautiful UI with Tailwind CSS  
 ✅ **Admin Interface**: Django admin for content management  
 

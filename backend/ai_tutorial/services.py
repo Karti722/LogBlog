@@ -1,6 +1,6 @@
-import openai
 from django.conf import settings
 from .models import Tutorial, TutorialStep, TutorialCategory, AITutorialRequest
+from .ml_models import MLTutorialGenerator
 from django.utils.text import slugify
 import json
 import logging
@@ -10,50 +10,36 @@ logger = logging.getLogger(__name__)
 
 class AITutorialGenerator:
     def __init__(self):
-        # Check if we have a valid OpenAI API key
-        api_key = getattr(settings, 'OPENAI_API_KEY', None)
-        self.use_mock = not api_key or api_key == 'your-openai-api-key-here' or api_key.strip() == ''
+        # Initialize ML-based generator
+        self.ml_generator = MLTutorialGenerator()
+        self.use_ml = getattr(settings, 'USE_ML_GENERATOR', True)
         
-        if not self.use_mock:
-            self.client = openai.OpenAI(api_key=api_key)
+        if self.use_ml:
+            logger.info("Using ML-based tutorial generation")
         else:
-            logger.warning("Using mock AI tutorial generation - no valid OpenAI API key found")
+            logger.warning("Using mock AI tutorial generation - ML generator disabled")
     
     def generate_tutorial(self, request_obj):
-        """Generate a complete tutorial using OpenAI GPT or mock data"""
+        """Generate a complete tutorial using ML models or mock data"""
         try:
             # Update request status
             request_obj.status = 'processing'
             request_obj.save()
             
-            if self.use_mock:
+            if self.use_ml:
+                # Use ML model
+                tutorial_data = self.ml_generator.generate_tutorial(
+                    request_obj.topic,
+                    request_obj.description,
+                    request_obj.difficulty
+                )
+            else:
                 # Use mock data for development
                 tutorial_data = self._create_mock_tutorial_data(
                     request_obj.topic,
                     request_obj.description,
                     request_obj.difficulty
                 )
-            else:
-                # Use real OpenAI API
-                prompt = self._create_tutorial_prompt(
-                    request_obj.topic,
-                    request_obj.description,
-                    request_obj.difficulty
-                )
-                
-                # Call OpenAI API
-                response = self.client.chat.completions.create(
-                    model="gpt-4-turbo-preview",
-                    messages=[
-                        {"role": "system", "content": "You are an expert technical writer and educator who creates comprehensive, step-by-step tutorials for building blogs and web applications."},
-                        {"role": "user", "content": prompt}
-                    ],
-                    max_tokens=4000,
-                    temperature=0.7
-                )
-                
-                # Parse the response
-                tutorial_data = self._parse_tutorial_response(response.choices[0].message.content)
             
             # Create tutorial in database
             tutorial = self._create_tutorial_from_data(tutorial_data, request_obj)
@@ -72,87 +58,6 @@ class AITutorialGenerator:
             request_obj.save()
             raise
     
-    def _create_tutorial_prompt(self, topic, description, difficulty):
-        """Create a detailed prompt for OpenAI"""
-        prompt = f"""
-        Create a comprehensive tutorial on "{topic}" for {difficulty} level developers.
-        
-        {f"Additional context: {description}" if description else ""}
-        
-        Please provide a detailed tutorial with the following structure:
-        
-        1. Tutorial Title
-        2. Brief Description (2-3 sentences)
-        3. Estimated Duration (in minutes)
-        4. Prerequisites (if any)
-        5. Step-by-step instructions (minimum 5 steps, maximum 15 steps)
-        
-        For each step, include:
-        - Step title
-        - Detailed explanation
-        - Code examples (if applicable)
-        - Best practices or tips
-        
-        Focus on practical, hands-on learning with real-world examples.
-        Make sure the tutorial is actionable and includes all necessary code snippets.
-        
-        Format your response as a JSON object with this structure:
-        {{
-            "title": "Tutorial Title",
-            "description": "Brief description",
-            "estimated_duration": 30,
-            "prerequisites": ["prerequisite1", "prerequisite2"],
-            "steps": [
-                {{
-                    "title": "Step Title",
-                    "content": "Detailed explanation",
-                    "code_example": "Optional code example"
-                }}
-            ]
-        }}
-        
-        Topic: {topic}
-        Difficulty: {difficulty}
-        """
-        return prompt
-    
-    def _parse_tutorial_response(self, response_text):
-        """Parse OpenAI response and extract tutorial data"""
-        try:
-            # Try to find JSON in the response
-            start_idx = response_text.find('{')
-            end_idx = response_text.rfind('}') + 1
-            
-            if start_idx != -1 and end_idx != -1:
-                json_str = response_text[start_idx:end_idx]
-                return json.loads(json_str)
-            else:
-                # If no JSON found, create a basic structure
-                return self._create_fallback_tutorial_data(response_text)
-                
-        except json.JSONDecodeError:
-            # Fallback to parsing text manually
-            return self._create_fallback_tutorial_data(response_text)
-    
-    def _create_fallback_tutorial_data(self, text):
-        """Create tutorial data from plain text response"""
-        lines = text.split('\n')
-        title = lines[0].strip() if lines else "Generated Tutorial"
-        
-        return {
-            "title": title,
-            "description": "AI-generated tutorial created from your request.",
-            "estimated_duration": 30,
-            "prerequisites": [],
-            "steps": [
-                {
-                    "title": "Getting Started",
-                    "content": text,
-                    "code_example": ""
-                }
-            ]
-        }
-    
     def _create_tutorial_from_data(self, data, request_obj):
         """Create Tutorial and TutorialStep objects from parsed data"""
         # Get or create category
@@ -164,10 +69,18 @@ class AITutorialGenerator:
             }
         )
         
+        # Generate unique slug
+        base_slug = slugify(data['title'])
+        slug = base_slug
+        counter = 1
+        while Tutorial.objects.filter(slug=slug).exists():
+            slug = f"{base_slug}-{counter}"
+            counter += 1
+        
         # Create tutorial
         tutorial = Tutorial.objects.create(
             title=data['title'],
-            slug=slugify(data['title']),
+            slug=slug,
             category=category,
             description=data.get('description', ''),
             difficulty=request_obj.difficulty,
@@ -190,49 +103,79 @@ class AITutorialGenerator:
     def get_tutorial_suggestions(self, topic):
         """Get AI-powered tutorial suggestions based on a topic"""
         try:
-            if self.use_mock:
+            if self.use_ml:
+                # Use ML model for suggestions
+                return self._create_ml_suggestions(topic)
+            else:
                 # Return mock suggestions for development
                 return self._create_mock_suggestions(topic)
-            
-            prompt = f"""
-            Based on the topic "{topic}", suggest 5 related tutorial topics that would be helpful for someone learning about blog development and web applications.
-            
-            Provide suggestions in JSON format:
-            {{
-                "suggestions": [
-                    {{
-                        "title": "Tutorial Title",
-                        "description": "Brief description",
-                        "difficulty": "beginner|intermediate|advanced",
-                        "estimated_duration": 30
-                    }}
-                ]
-            }}
-            """
-            
-            response = self.client.chat.completions.create(
-                model="gpt-3.5-turbo",
-                messages=[
-                    {"role": "system", "content": "You are a helpful assistant that suggests relevant tutorials."},
-                    {"role": "user", "content": prompt}
-                ],
-                max_tokens=1000,
-                temperature=0.5
-            )
-            
-            suggestions_text = response.choices[0].message.content
-            start_idx = suggestions_text.find('{')
-            end_idx = suggestions_text.rfind('}') + 1
-            
-            if start_idx != -1 and end_idx != -1:
-                json_str = suggestions_text[start_idx:end_idx]
-                return json.loads(json_str)
-            
-            return {"suggestions": []}
-            
+                
         except Exception as e:
             logger.error(f"Error getting tutorial suggestions: {str(e)}")
             return {"suggestions": []}
+    
+    def _create_ml_suggestions(self, topic):
+        """Create tutorial suggestions using ML model"""
+        try:
+            # Generate suggestions using the ML model
+            base_suggestions = self.ml_generator.tutorial_templates
+            
+            # Find related tutorials based on similarity
+            related_tutorials = []
+            for template in base_suggestions:
+                if topic.lower() in template['topic'].lower() or \
+                   topic.lower() in template['description'].lower():
+                    related_tutorials.append({
+                        "title": template['tutorial']['title'],
+                        "description": template['tutorial']['description'],
+                        "difficulty": template['difficulty'],
+                        "estimated_duration": template['tutorial']['duration']
+                    })
+            
+            # If no direct matches, create generic suggestions
+            if not related_tutorials:
+                related_tutorials = self._create_generic_suggestions(topic)
+            
+            return {"suggestions": related_tutorials[:5]}  # Return top 5
+            
+        except Exception as e:
+            logger.error(f"Error creating ML suggestions: {str(e)}")
+            return self._create_mock_suggestions(topic)
+    
+    def _create_generic_suggestions(self, topic):
+        """Create generic suggestions for any topic"""
+        return [
+            {
+                "title": f"Getting Started with {topic}",
+                "description": f"A beginner-friendly introduction to {topic} fundamentals",
+                "difficulty": "beginner",
+                "estimated_duration": 30
+            },
+            {
+                "title": f"Advanced {topic} Techniques",
+                "description": f"Deep dive into advanced concepts and best practices for {topic}",
+                "difficulty": "advanced",
+                "estimated_duration": 90
+            },
+            {
+                "title": f"Building a Real-World {topic} Application",
+                "description": f"Step-by-step guide to building a production-ready application using {topic}",
+                "difficulty": "intermediate",
+                "estimated_duration": 120
+            },
+            {
+                "title": f"{topic} Performance Optimization",
+                "description": f"Learn how to optimize and scale your {topic} applications",
+                "difficulty": "intermediate",
+                "estimated_duration": 60
+            },
+            {
+                "title": f"Testing and Debugging {topic}",
+                "description": f"Comprehensive guide to testing strategies and debugging techniques for {topic}",
+                "difficulty": "intermediate",
+                "estimated_duration": 45
+            }
+        ]
 
     def _create_mock_suggestions(self, topic):
         """Create mock tutorial suggestions for development"""

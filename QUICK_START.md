@@ -33,7 +33,9 @@ In the Environment section, add:
 SECRET_KEY=your-super-secure-production-key-min-50-chars
 DEBUG=False
 DATABASE_URL=postgresql://user:pass@host:port/db
-OPENAI_API_KEY=sk-proj-your-openai-key
+USE_ML_GENERATOR=True
+ML_MODEL_PATH=backend/ai_tutorial/models/
+ML_DEVICE=auto
 FRONTEND_URL=https://logblog-central.onrender.com
 ALLOWED_HOSTS=logblog-central.onrender.com,localhost,127.0.0.1
 ```

@@ -149,8 +149,10 @@ CORS_ALLOW_CREDENTIALS = True
 # Frontend URL for password reset emails
 FRONTEND_URL = os.getenv('FRONTEND_URL', 'http://localhost:5174')
 
-# OpenAI Configuration
-OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
+# ML Configuration (PyTorch & Scikit-learn based AI)
+USE_ML_GENERATOR = os.getenv('USE_ML_GENERATOR', 'True').lower() == 'true'
+ML_MODEL_PATH = os.getenv('ML_MODEL_PATH', 'backend/ai_tutorial/models/')
+ML_DEVICE = os.getenv('ML_DEVICE', 'auto')  # 'auto', 'cpu', 'cuda'
 
 # Media files
 MEDIA_URL = '/media/'
