@@ -1,4 +1,6 @@
 logenv
+backend/__pycache__
+backend/*/__pycache__
 backend/*.env
 backend/backend/__pycache__
 frontend/*.env
