@@ -12,7 +12,9 @@ SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-s(4-b(bqtm^97ct4ph2vl1=e)#
 
 DEBUG = os.getenv('DEBUG', 'True').lower() == 'true'
 
-ALLOWED_HOSTS = ['localhost', '127.0.0.1', '*']
+# Parse ALLOWED_HOSTS from environment variable
+ALLOWED_HOSTS_ENV = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1,*')
+ALLOWED_HOSTS = [host.strip() for host in ALLOWED_HOSTS_ENV.split(',')]
 
 # Application definition
 
@@ -33,6 +35,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -64,9 +67,18 @@ WSGI_APPLICATION = 'backend.wsgi.application'
 # Use connection pooling for main DB access
 DATABASE_URL = os.getenv("DATABASE_URL")
 
-DATABASES = {
-    'default': dj_database_url.parse(DATABASE_URL, conn_max_age=600),
-}
+if DATABASE_URL:
+    DATABASES = {
+        'default': dj_database_url.parse(DATABASE_URL, conn_max_age=600),
+    }
+else:
+    # Fallback to SQLite for local development
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
+    }
 
 AUTH_PASSWORD_VALIDATORS = [
     {
@@ -92,6 +104,10 @@ USE_I18N = True
 USE_TZ = True
 
 STATIC_URL = 'static/'
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+
+# Whitenoise configuration for serving static files
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
@@ -111,7 +127,7 @@ REST_FRAMEWORK = {
     ],
 }
 
-# CORS Configuration
+# CORS Configuration - Dynamic based on environment
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
     "http://localhost:5173",
@@ -123,10 +139,15 @@ CORS_ALLOWED_ORIGINS = [
     "http://127.0.0.1:5175",
 ]
 
+# Add production domain to CORS if FRONTEND_URL is set and is HTTPS
+frontend_url = os.getenv('FRONTEND_URL')
+if frontend_url and frontend_url.startswith('https://'):
+    CORS_ALLOWED_ORIGINS.append(frontend_url)
+
 CORS_ALLOW_CREDENTIALS = True
 
 # Frontend URL for password reset emails
-FRONTEND_URL = "http://localhost:5174"
+FRONTEND_URL = os.getenv('FRONTEND_URL', 'http://localhost:5174')
 
 # OpenAI Configuration
 OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
@@ -134,3 +155,27 @@ OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
 # Media files
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+
+# Production Security Settings
+if not DEBUG:
+    SECURE_SSL_REDIRECT = True
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+    SECURE_HSTS_SECONDS = 31536000
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
+    SECURE_CONTENT_TYPE_NOSNIFF = True
+    SECURE_BROWSER_XSS_FILTER = True
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+
+# Production Security Settings
+if not DEBUG:
+    SECURE_SSL_REDIRECT = True
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+    SECURE_HSTS_SECONDS = 31536000
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
+    SECURE_CONTENT_TYPE_NOSNIFF = True
+    SECURE_BROWSER_XSS_FILTER = True
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True

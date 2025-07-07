@@ -1,0 +1,26 @@
+# Render.yaml - Optional deployment configuration
+# This file can be used to configure your Render services
+# You can also configure everything through the Render dashboard
+
+services:
+  - type: web
+    name: logblog-app
+    env: python
+    buildCommand: "./build.sh"
+    startCommand: "cd backend && gunicorn backend.wsgi:application --bind 0.0.0.0:$PORT"
+    envVars:
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DEBUG
+        value: "False"
+      - key: OPENAI_API_KEY
+        sync: false  # Set this manually in dashboard
+      - key: FRONTEND_URL
+        value: "https://logblog-app.onrender.com"
+      - key: ALLOWED_HOSTS
+        value: "logblog-app.onrender.com,localhost,127.0.0.1"
+
+databases:
+  - name: logblog-database
+    databaseName: logblog_db
+    user: logblog_user
