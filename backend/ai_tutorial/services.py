@@ -10,35 +10,50 @@ logger = logging.getLogger(__name__)
 
 class AITutorialGenerator:
     def __init__(self):
-        self.client = openai.OpenAI(api_key=settings.OPENAI_API_KEY)
+        # Check if we have a valid OpenAI API key
+        api_key = getattr(settings, 'OPENAI_API_KEY', None)
+        self.use_mock = not api_key or api_key == 'your-openai-api-key-here' or api_key.strip() == ''
+        
+        if not self.use_mock:
+            self.client = openai.OpenAI(api_key=api_key)
+        else:
+            logger.warning("Using mock AI tutorial generation - no valid OpenAI API key found")
     
     def generate_tutorial(self, request_obj):
-        """Generate a complete tutorial using OpenAI GPT"""
+        """Generate a complete tutorial using OpenAI GPT or mock data"""
         try:
             # Update request status
             request_obj.status = 'processing'
             request_obj.save()
             
-            # Create the prompt for OpenAI
-            prompt = self._create_tutorial_prompt(
-                request_obj.topic,
-                request_obj.description,
-                request_obj.difficulty
-            )
-            
-            # Call OpenAI API
-            response = self.client.chat.completions.create(
-                model="gpt-4-turbo-preview",
-                messages=[
-                    {"role": "system", "content": "You are an expert technical writer and educator who creates comprehensive, step-by-step tutorials for building blogs and web applications."},
-                    {"role": "user", "content": prompt}
-                ],
-                max_tokens=4000,
-                temperature=0.7
-            )
-            
-            # Parse the response
-            tutorial_data = self._parse_tutorial_response(response.choices[0].message.content)
+            if self.use_mock:
+                # Use mock data for development
+                tutorial_data = self._create_mock_tutorial_data(
+                    request_obj.topic,
+                    request_obj.description,
+                    request_obj.difficulty
+                )
+            else:
+                # Use real OpenAI API
+                prompt = self._create_tutorial_prompt(
+                    request_obj.topic,
+                    request_obj.description,
+                    request_obj.difficulty
+                )
+                
+                # Call OpenAI API
+                response = self.client.chat.completions.create(
+                    model="gpt-4-turbo-preview",
+                    messages=[
+                        {"role": "system", "content": "You are an expert technical writer and educator who creates comprehensive, step-by-step tutorials for building blogs and web applications."},
+                        {"role": "user", "content": prompt}
+                    ],
+                    max_tokens=4000,
+                    temperature=0.7
+                )
+                
+                # Parse the response
+                tutorial_data = self._parse_tutorial_response(response.choices[0].message.content)
             
             # Create tutorial in database
             tutorial = self._create_tutorial_from_data(tutorial_data, request_obj)
@@ -175,6 +190,10 @@ class AITutorialGenerator:
     def get_tutorial_suggestions(self, topic):
         """Get AI-powered tutorial suggestions based on a topic"""
         try:
+            if self.use_mock:
+                # Return mock suggestions for development
+                return self._create_mock_suggestions(topic)
+            
             prompt = f"""
             Based on the topic "{topic}", suggest 5 related tutorial topics that would be helpful for someone learning about blog development and web applications.
             
@@ -214,3 +233,98 @@ class AITutorialGenerator:
         except Exception as e:
             logger.error(f"Error getting tutorial suggestions: {str(e)}")
             return {"suggestions": []}
+
+    def _create_mock_suggestions(self, topic):
+        """Create mock tutorial suggestions for development"""
+        base_suggestions = [
+            {
+                "title": f"Getting Started with {topic}",
+                "description": f"A beginner-friendly introduction to {topic} fundamentals",
+                "difficulty": "beginner",
+                "estimated_duration": 30
+            },
+            {
+                "title": f"Advanced {topic} Techniques",
+                "description": f"Deep dive into advanced concepts and best practices for {topic}",
+                "difficulty": "advanced",
+                "estimated_duration": 90
+            },
+            {
+                "title": f"Building a Real-World {topic} Application",
+                "description": f"Step-by-step guide to building a production-ready application using {topic}",
+                "difficulty": "intermediate",
+                "estimated_duration": 120
+            },
+            {
+                "title": f"{topic} Performance Optimization",
+                "description": f"Learn how to optimize and scale your {topic} applications",
+                "difficulty": "intermediate",
+                "estimated_duration": 60
+            },
+            {
+                "title": f"Testing and Debugging {topic}",
+                "description": f"Comprehensive guide to testing strategies and debugging techniques for {topic}",
+                "difficulty": "intermediate",
+                "estimated_duration": 45
+            }
+        ]
+        
+        return {"suggestions": base_suggestions}
+    
+    def _create_mock_tutorial_data(self, topic, description, difficulty):
+        """Create mock tutorial data for development purposes"""
+        difficulty_info = {
+            'beginner': {
+                'duration': 30,
+                'step_count': 5,
+                'complexity': 'simple'
+            },
+            'intermediate': {
+                'duration': 60,
+                'step_count': 8,
+                'complexity': 'moderate'
+            },
+            'advanced': {
+                'duration': 120,
+                'step_count': 12,
+                'complexity': 'complex'
+            }
+        }
+        
+        info = difficulty_info.get(difficulty, difficulty_info['intermediate'])
+        
+        mock_steps = []
+        for i in range(1, info['step_count'] + 1):
+            if i == 1:
+                step = {
+                    "title": f"Setting Up Your {topic} Environment",
+                    "content": f"In this first step, we'll set up the development environment for {topic}. {description or 'This tutorial will guide you through the process step by step.'}",
+                    "code_example": "# Install required dependencies\nnpm install express\n# or\npip install django"
+                }
+            elif i == 2:
+                step = {
+                    "title": f"Understanding {topic} Basics",
+                    "content": f"Before diving into the implementation, let's understand the core concepts of {topic}. This foundational knowledge will help you build better applications.",
+                    "code_example": "// Basic configuration\nconst config = {\n  name: 'my-app',\n  version: '1.0.0'\n};"
+                }
+            elif i == info['step_count']:
+                step = {
+                    "title": f"Testing and Deployment",
+                    "content": f"In this final step, we'll test our {topic} implementation and prepare it for deployment. We'll cover best practices and common pitfalls to avoid.",
+                    "code_example": "# Run tests\nnpm test\n# Build for production\nnpm run build"
+                }
+            else:
+                step = {
+                    "title": f"Implementing {topic} Feature {i-1}",
+                    "content": f"Now we'll implement an important feature of {topic}. This step builds upon the previous concepts and adds {info['complexity']} functionality to your application.",
+                    "code_example": f"// Feature implementation for step {i}\nfunction handle{topic.replace(' ', '')}() {{\n  // Implementation details here\n  return 'success';\n}}"
+                }
+            mock_steps.append(step)
+        
+        return {
+            "title": f"Complete Guide to {topic}",
+            "description": f"A comprehensive {difficulty} tutorial on {topic}. {description or 'Learn step-by-step how to implement and master this technology.'}",
+            "estimated_duration": info['duration'],
+            "prerequisites": ["Basic programming knowledge", "Familiarity with web development"],
+            "steps": mock_steps
+        }
