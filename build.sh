@@ -9,6 +9,10 @@ echo "📦 Installing backend dependencies..."
 cd backend
 pip install -r requirements.txt
 
+# Train ML models for tutorial generation
+echo "🧠 Training ML models for tutorial generation..."
+python manage.py train_ml_models --force
+
 # Collect static files
 echo "📂 Collecting static files..."
 python manage.py collectstatic --noinput
@@ -29,3 +33,4 @@ mkdir -p ../backend/staticfiles
 cp -r dist/* ../backend/staticfiles/
 
 echo "✅ Build process completed successfully!"
+echo "🎉 LogBlog with ML-based tutorial generation is ready!"

@@ -1,6 +1,5 @@
-# Render.yaml - Optional deployment configuration
-# This file can be used to configure your Render services
-# You can also configure everything through the Render dashboard
+# Render.yaml - Deployment configuration for ML-based LogBlog
+# This file configures your Render services for the ML-based tutorial generator
 
 services:
   - type: web
@@ -13,8 +12,12 @@ services:
         generateValue: true
       - key: DEBUG
         value: "False"
-      - key: OPENAI_API_KEY
-        sync: false  # Set this manually in dashboard
+      - key: USE_ML_GENERATOR
+        value: "True"
+      - key: ML_MODEL_PATH
+        value: "backend/ai_tutorial/models/"
+      - key: ML_DEVICE
+        value: "cpu"
       - key: FRONTEND_URL
         value: "https://logblog-app.onrender.com"
       - key: ALLOWED_HOSTS

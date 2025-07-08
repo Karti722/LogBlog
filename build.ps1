@@ -6,6 +6,10 @@ Write-Host "📦 Installing backend dependencies..." -ForegroundColor Yellow
 Set-Location backend
 pip install -r requirements.txt
 
+# Train ML models for tutorial generation
+Write-Host "🧠 Training ML models for tutorial generation..." -ForegroundColor Yellow
+python manage.py train_ml_models --force
+
 # Collect static files
 Write-Host "📂 Collecting static files..." -ForegroundColor Yellow
 python manage.py collectstatic --noinput
@@ -28,3 +32,4 @@ if (!(Test-Path "../backend/staticfiles")) {
 Copy-Item -Path "dist/*" -Destination "../backend/staticfiles/" -Recurse -Force
 
 Write-Host "✅ Build process completed successfully!" -ForegroundColor Green
+Write-Host "🎉 LogBlog with ML-based tutorial generation is ready!" -ForegroundColor Cyan

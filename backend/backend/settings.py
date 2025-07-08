@@ -151,7 +151,7 @@ FRONTEND_URL = os.getenv('FRONTEND_URL', 'http://localhost:5174')
 
 # ML Configuration (PyTorch & Scikit-learn based AI)
 USE_ML_GENERATOR = os.getenv('USE_ML_GENERATOR', 'True').lower() == 'true'
-ML_MODEL_PATH = os.getenv('ML_MODEL_PATH', 'backend/ai_tutorial/models/')
+ML_MODEL_PATH = os.getenv('ML_MODEL_PATH', os.path.join(BASE_DIR, 'ai_tutorial', 'models'))
 ML_DEVICE = os.getenv('ML_DEVICE', 'auto')  # 'auto', 'cpu', 'cuda'
 
 # Media files
@@ -169,15 +169,45 @@ if not DEBUG:
     SECURE_BROWSER_XSS_FILTER = True
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
+    
+    # Additional production settings
+    SECURE_REFERRER_POLICY = 'strict-origin-when-cross-origin'
+    SECURE_CROSS_ORIGIN_OPENER_POLICY = 'same-origin'
 
-# Production Security Settings
-if not DEBUG:
-    SECURE_SSL_REDIRECT = True
-    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
-    SECURE_HSTS_SECONDS = 31536000
-    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
-    SECURE_HSTS_PRELOAD = True
-    SECURE_CONTENT_TYPE_NOSNIFF = True
-    SECURE_BROWSER_XSS_FILTER = True
-    SESSION_COOKIE_SECURE = True
-    CSRF_COOKIE_SECURE = True
+# Logging Configuration
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format': '{levelname} {asctime} {module} {process:d} {thread:d} {message}',
+            'style': '{',
+        },
+        'simple': {
+            'format': '{levelname} {message}',
+            'style': '{',
+        },
+    },
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'verbose',
+        },
+    },
+    'root': {
+        'handlers': ['console'],
+        'level': 'INFO',
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['console'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        'ai_tutorial': {
+            'handlers': ['console'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+    },
+}

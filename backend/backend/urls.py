@@ -18,6 +18,7 @@ from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
+from .health_views import health_check, readiness_check, liveness_check
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -25,6 +26,11 @@ urlpatterns = [
     path('blog/', include('blog.urls')),
     path('ai-tutorial/', include('ai_tutorial.urls')),
     path('api-auth/', include('rest_framework.urls')),
+    
+    # Health check endpoints
+    path('health/', health_check, name='health_check'),
+    path('ready/', readiness_check, name='readiness_check'),
+    path('alive/', liveness_check, name='liveness_check'),
 ]
 
 # Serve media files during development
