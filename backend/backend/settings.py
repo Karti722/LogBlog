@@ -127,10 +127,14 @@ REST_FRAMEWORK = {
     ],
 }
 
-# CORS Configuration - Dynamic based on environment
+# CORS Configuration - Allow all origins (NOT RECOMMENDED for production)
+CORS_ALLOW_ALL_ORIGINS = True
+CORS_ALLOW_CREDENTIALS = True
+
+# Backup specific origins (can be removed if using CORS_ALLOW_ALL_ORIGINS)
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
-    "http://localhost:5173",
+    "http://localhost:5173", 
     "http://localhost:5174",
     "http://localhost:5175",
     "http://127.0.0.1:3000",
@@ -143,8 +147,6 @@ CORS_ALLOWED_ORIGINS = [
 frontend_url = os.getenv('FRONTEND_URL')
 if frontend_url and frontend_url.startswith('https://'):
     CORS_ALLOWED_ORIGINS.append(frontend_url)
-
-CORS_ALLOW_CREDENTIALS = True
 
 # Frontend URL for password reset emails
 FRONTEND_URL = os.getenv('FRONTEND_URL', 'http://localhost:5174')

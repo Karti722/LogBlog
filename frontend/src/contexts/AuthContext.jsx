@@ -42,6 +42,11 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (credentials) => {
     try {
+      // Clear any existing invalid tokens before login attempt
+      localStorage.removeItem('authToken');
+      localStorage.removeItem('currentUser');
+      setIsAuthenticated(false);
+      
       const response = await authAPI.login(credentials);
       if (response.data.success) {
         const { token, user } = response.data;

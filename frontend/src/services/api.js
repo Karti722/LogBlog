@@ -14,9 +14,15 @@ const api = axios.create({
 // Request interceptor to add auth token if available
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('authToken');
-    if (token) {
-      config.headers.Authorization = `Token ${token}`;
+    // Don't add auth token for login/register/forgot-password requests
+    const authEndpoints = ['/auth/login/', '/auth/register/', '/auth/forgot-password/', '/auth/reset-password/'];
+    const isAuthEndpoint = authEndpoints.some(endpoint => config.url.includes(endpoint));
+    
+    if (!isAuthEndpoint) {
+      const token = localStorage.getItem('authToken');
+      if (token) {
+        config.headers.Authorization = `Token ${token}`;
+      }
     }
     return config;
   },
@@ -30,9 +36,16 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      // Handle unauthorized access
-      localStorage.removeItem('authToken');
-      window.location.href = '/login';
+      // Only redirect if not already on login/register/reset pages
+      const currentPath = window.location.pathname;
+      const authPages = ['/login', '/register', '/forgot-password', '/reset-password'];
+      const isOnAuthPage = authPages.some(page => currentPath.includes(page));
+      
+      if (!isOnAuthPage) {
+        localStorage.removeItem('authToken');
+        localStorage.removeItem('currentUser');
+        window.location.href = '/login';
+      }
     }
     return Promise.reject(error);
   }
