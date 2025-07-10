@@ -1,0 +1,25 @@
+# Railway Configuration for LogBlog Backend
+# This file helps Railway understand how to deploy your Django app
+
+services:
+  web:
+    build:
+      commands:
+        - pip install -r requirements.txt
+        - python manage.py collectstatic --noinput
+        - python manage.py migrate
+        - python manage.py train_ml_models --force
+    start:
+      command: gunicorn backend.wsgi:application --bind 0.0.0.0:$PORT
+    environment:
+      - SECRET_KEY
+      - DEBUG=False
+      - DATABASE_URL=${{Postgres.DATABASE_URL}}
+      - USE_ML_GENERATOR=True
+      - ML_MODEL_PATH=backend/ai_tutorial/models/
+      - ML_DEVICE=cpu
+      - FRONTEND_URL
+      - ALLOWED_HOSTS
+      - CORS_ALLOWED_ORIGINS
+      - STATIC_URL=/static/
+      - STATIC_ROOT=staticfiles/
