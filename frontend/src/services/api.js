@@ -5,11 +5,53 @@ const API_BASE_URL = process.env.REACT_APP_API_URL || 'https://logblog-productio
 // Create axios instance with default config
 const api = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 10000,
+  timeout: 30000, // Increased from 10000ms to 30000ms for AI operations
   headers: {
     'Content-Type': 'application/json',
   },
 });
+
+// Create a separate axios instance for AI operations with longer timeout
+const aiApi = axios.create({
+  baseURL: API_BASE_URL,
+  timeout: 120000, // 2 minutes for AI tutorial generation
+  headers: {
+    'Content-Type': 'application/json',
+  },
+});
+
+// Add interceptors to AI API as well
+aiApi.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('authToken');
+    if (token) {
+      config.headers.Authorization = `Token ${token}`;
+    }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
+
+aiApi.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      // Only redirect if not already on login/register/reset pages
+      const currentPath = window.location.pathname;
+      const authPages = ['/login', '/register', '/forgot-password', '/reset-password'];
+      const isOnAuthPage = authPages.some(page => currentPath.includes(page));
+      
+      if (!isOnAuthPage) {
+        localStorage.removeItem('authToken');
+        localStorage.removeItem('currentUser');
+        window.location.href = '/login';
+      }
+    }
+    return Promise.reject(error);
+  }
+);
 
 // Request interceptor to add auth token if available
 api.interceptors.request.use(
@@ -99,10 +141,10 @@ export const tutorialAPI = {
   getTutorialCategories: () => api.get('/ai-tutorial/api/categories/'),
 
   // AI Requests
-  createTutorialRequest: (data) => api.post('/ai-tutorial/api/requests/', data),
+  createTutorialRequest: (data) => aiApi.post('/ai-tutorial/api/requests/', data),
   getTutorialRequests: () => api.get('/ai-tutorial/api/requests/'),
-  getTutorialSuggestions: (data) => api.post('/ai-tutorial/api/requests/suggestions/', data),
-  regenerateTutorial: (id) => api.post(`/ai-tutorial/api/requests/${id}/regenerate/`),
+  getTutorialSuggestions: (data) => aiApi.post('/ai-tutorial/api/requests/suggestions/', data),
+  regenerateTutorial: (id) => aiApi.post(`/ai-tutorial/api/requests/${id}/regenerate/`),
 };
 
 // Auth API endpoints

@@ -1,3 +1,4 @@
+import traceback
 from django.conf import settings
 from .models import Tutorial, TutorialStep, TutorialCategory, AITutorialRequest
 from django.utils.text import slugify
@@ -10,23 +11,36 @@ logger = logging.getLogger(__name__)
 try:
     from .ml_models import MLTutorialGenerator
     ML_AVAILABLE = True
+    logger.info("ML models imported successfully")
 except ImportError as e:
     logger.warning(f"ML models not available: {e}")
+    ML_AVAILABLE = False
+    MLTutorialGenerator = None
+except Exception as e:
+    logger.error(f"Error importing ML models: {e}")
+    logger.error(traceback.format_exc())
     ML_AVAILABLE = False
     MLTutorialGenerator = None
 
 
 class AITutorialGenerator:
     def __init__(self):
+        logger.info("Initializing AITutorialGenerator")
+        
         # Initialize ML-based generator
         self.use_ml = getattr(settings, 'USE_ML_GENERATOR', True) and ML_AVAILABLE
+        logger.info(f"USE_ML_GENERATOR setting: {getattr(settings, 'USE_ML_GENERATOR', True)}")
+        logger.info(f"ML_AVAILABLE: {ML_AVAILABLE}")
+        logger.info(f"Will use ML: {self.use_ml}")
         
         if self.use_ml and ML_AVAILABLE:
             try:
+                logger.info("Attempting to initialize ML generator")
                 self.ml_generator = MLTutorialGenerator()
-                logger.info("Using ML-based tutorial generation")
+                logger.info("ML generator initialized successfully")
             except Exception as e:
                 logger.error(f"Failed to initialize ML generator: {e}")
+                logger.error(traceback.format_exc())
                 self.use_ml = False
                 self.ml_generator = None
         else:
@@ -34,41 +48,59 @@ class AITutorialGenerator:
             
         if not self.use_ml:
             logger.warning("Using mock AI tutorial generation - ML generator disabled or unavailable")
+        else:
+            logger.info("AITutorialGenerator initialized with ML support")
     
     def generate_tutorial(self, request_obj):
         """Generate a complete tutorial using ML models or mock data"""
         try:
+            logger.info(f"Starting tutorial generation for topic: {request_obj.topic}, difficulty: {request_obj.difficulty}")
+            
             # Update request status
             request_obj.status = 'processing'
             request_obj.save()
             
             if self.use_ml:
-                # Use ML model
-                tutorial_data = self.ml_generator.generate_tutorial(
-                    request_obj.topic,
-                    request_obj.description,
-                    request_obj.difficulty
-                )
+                logger.info("Using ML model for tutorial generation")
+                try:
+                    # Use ML model
+                    tutorial_data = self.ml_generator.generate_tutorial(
+                        request_obj.topic,
+                        request_obj.description,
+                        request_obj.difficulty
+                    )
+                    logger.info("ML model generated tutorial successfully")
+                except Exception as e:
+                    logger.error(f"ML model generation failed: {e}")
+                    logger.error(traceback.format_exc())
+                    raise
             else:
+                logger.info("Using mock data for tutorial generation")
                 # Use mock data for development
                 tutorial_data = self._create_mock_tutorial_data(
                     request_obj.topic,
                     request_obj.description,
                     request_obj.difficulty
                 )
+                logger.info("Mock tutorial data created successfully")
+            
+            logger.info(f"Tutorial data structure: {list(tutorial_data.keys()) if tutorial_data else 'None'}")
             
             # Create tutorial in database
             tutorial = self._create_tutorial_from_data(tutorial_data, request_obj)
+            logger.info(f"Tutorial created in database with ID: {tutorial.id}")
             
             # Update request status
             request_obj.status = 'completed'
             request_obj.generated_tutorial = tutorial
             request_obj.save()
             
+            logger.info("Tutorial generation completed successfully")
             return tutorial
             
         except Exception as e:
             logger.error(f"Error generating tutorial: {str(e)}")
+            logger.error(traceback.format_exc())
             request_obj.status = 'failed'
             request_obj.error_message = str(e)
             request_obj.save()
