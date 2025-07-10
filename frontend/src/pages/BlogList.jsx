@@ -100,6 +100,9 @@ const BlogList = () => {
               <p className="mt-2 text-gray-600">
                 Discover insights, tutorials, and stories from our community
               </p>
+              <p className="mt-1 text-sm text-gray-500">
+                Platform by <span className="font-medium text-indigo-600">Kartikeya Kumaria</span>
+              </p>
             </div>
             {isAuthenticated && (
               <Link

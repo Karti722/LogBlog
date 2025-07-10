@@ -62,6 +62,11 @@ const Login = () => {
           <p className="mt-2 text-center text-sm text-gray-600">
             Access edit and delete features for your blog posts
           </p>
+          <div className="mt-4 text-center">
+            <p className="text-xs text-gray-500">
+              Created by <span className="font-medium text-indigo-600">Kartikeya Kumaria</span>
+            </p>
+          </div>
         </div>
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
           <div className="rounded-md shadow-sm -space-y-px">

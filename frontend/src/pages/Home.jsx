@@ -45,6 +45,9 @@ const Home = () => {
             <h1 className="text-4xl md:text-6xl font-bold mb-6">
               Welcome to <span className="text-yellow-300">LogBlog</span>
             </h1>
+            <p className="text-lg mb-4 text-indigo-200">
+              Created by <span className="font-semibold text-yellow-300">Kartikeya Kumaria</span>
+            </p>
             <p className="text-xl md:text-2xl mb-8 text-indigo-100">
               Your ultimate destination for learning web development and creating amazing blogs
             </p>
