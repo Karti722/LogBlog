@@ -10,7 +10,7 @@ services:
         - python manage.py collectstatic --noinput
         - python manage.py migrate
     start:
-      command: gunicorn backend.wsgi:application --bind 0.0.0.0:$PORT
+      command: gunicorn backend.wsgi:application -c gunicorn.conf.py --bind 0.0.0.0:$PORT
     environment:
       - SECRET_KEY
       - DEBUG=False
