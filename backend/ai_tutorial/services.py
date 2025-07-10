@@ -1,23 +1,39 @@
 from django.conf import settings
 from .models import Tutorial, TutorialStep, TutorialCategory, AITutorialRequest
-from .ml_models import MLTutorialGenerator
 from django.utils.text import slugify
 import json
 import logging
 
 logger = logging.getLogger(__name__)
 
+# Import ML models conditionally
+try:
+    from .ml_models import MLTutorialGenerator
+    ML_AVAILABLE = True
+except ImportError as e:
+    logger.warning(f"ML models not available: {e}")
+    ML_AVAILABLE = False
+    MLTutorialGenerator = None
+
 
 class AITutorialGenerator:
     def __init__(self):
         # Initialize ML-based generator
-        self.ml_generator = MLTutorialGenerator()
-        self.use_ml = getattr(settings, 'USE_ML_GENERATOR', True)
+        self.use_ml = getattr(settings, 'USE_ML_GENERATOR', True) and ML_AVAILABLE
         
-        if self.use_ml:
-            logger.info("Using ML-based tutorial generation")
+        if self.use_ml and ML_AVAILABLE:
+            try:
+                self.ml_generator = MLTutorialGenerator()
+                logger.info("Using ML-based tutorial generation")
+            except Exception as e:
+                logger.error(f"Failed to initialize ML generator: {e}")
+                self.use_ml = False
+                self.ml_generator = None
         else:
-            logger.warning("Using mock AI tutorial generation - ML generator disabled")
+            self.ml_generator = None
+            
+        if not self.use_ml:
+            logger.warning("Using mock AI tutorial generation - ML generator disabled or unavailable")
     
     def generate_tutorial(self, request_obj):
         """Generate a complete tutorial using ML models or mock data"""

@@ -13,9 +13,17 @@ from .serializers import (
     TutorialListSerializer, TutorialDetailSerializer, TutorialCategorySerializer,
     AITutorialRequestSerializer, TutorialProgressUpdateSerializer, TutorialRatingSerializer
 )
-from .services import AITutorialGenerator
 
 logger = logging.getLogger(__name__)
+
+# Import services conditionally
+try:
+    from .services import AITutorialGenerator
+    AI_SERVICES_AVAILABLE = True
+except ImportError as e:
+    logger.warning(f"AI services not available: {e}")
+    AI_SERVICES_AVAILABLE = False
+    AITutorialGenerator = None
 
 
 class TutorialViewSet(viewsets.ReadOnlyModelViewSet):
@@ -162,6 +170,11 @@ class AITutorialRequestViewSet(viewsets.ModelViewSet):
     
     def create(self, request, *args, **kwargs):
         """Create a new AI tutorial request"""
+        if not AI_SERVICES_AVAILABLE:
+            return Response({
+                'error': 'AI tutorial generation is currently unavailable'
+            }, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+            
         serializer = self.get_serializer(data=request.data)
         if serializer.is_valid():
             tutorial_request = serializer.save()
@@ -201,6 +214,11 @@ class AITutorialRequestViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
         
+        if not AI_SERVICES_AVAILABLE:
+            return Response({
+                'error': 'AI tutorial suggestions are currently unavailable'
+            }, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+        
         try:
             generator = AITutorialGenerator()
             suggestions = generator.get_tutorial_suggestions(topic)
@@ -215,6 +233,11 @@ class AITutorialRequestViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['post'])
     def regenerate(self, request, pk=None):
         """Regenerate a failed tutorial"""
+        if not AI_SERVICES_AVAILABLE:
+            return Response({
+                'error': 'AI tutorial regeneration is currently unavailable'
+            }, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+            
         tutorial_request = self.get_object()
         
         if tutorial_request.status != 'failed':
