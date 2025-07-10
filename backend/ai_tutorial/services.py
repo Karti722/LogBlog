@@ -287,3 +287,5 @@ class AITutorialGenerator:
             "prerequisites": ["Basic programming knowledge", "Familiarity with web development"],
             "steps": mock_steps
         }
+
+
